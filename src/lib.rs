@@ -1,14 +1,16 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! docuparse - PDF loading, rendering and text extraction
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+mod error;
+mod metadata;
+mod pdf_document;
+mod pdfium_singleton;
+pub mod render;
+mod text;
+mod utils;
+mod validation;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use error::PdfError;
+pub use metadata::PdfMetadata;
+pub use pdf_document::PdfDocument;
+pub use pdfium_singleton::get_or_init_pdfium as init_pdfium;
+pub use render::{RenderConfig, RenderConfigBuilder};

@@ -1,0 +1,2 @@
+[tasks.coverage]
+run = "cargo llvm-cov nextest --html --open"
