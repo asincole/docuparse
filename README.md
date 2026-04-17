@@ -10,7 +10,8 @@ used by Google Chrome.
 
 - **Native text extraction** — extracts text directly from PDF text layers,
   no OCR required for digitally generated documents
-- **Page rendering** — renders PDF pages to images at configurable DPI
+- **Page rendering** — renders PDF pages to images at configurable DPI with
+  optional annotation rendering and dimension clamping
 - **Automatic page classification** — detects whether a page has a native
   text layer or is scanned
 - **PDF validation** — magic byte checking, size guards, existence checks
@@ -41,11 +42,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("pages: {}", doc.page_count());
     println!("file:  {}", doc.metadata.file_size_display());
 
-    for (page, result) in doc.extract_all_text_layers() {
+    for result in doc.extract_all_text_layers() {
         match result {
-            Ok(Some(text)) => println!("page {}: {} chars", page + 1, text.len()),
-            Ok(None)       => println!("page {}: scanned — no text layer", page + 1),
-            Err(e)         => eprintln!("page {}: error — {e}", page + 1),
+            Ok((page, Some(text))) => println!("page {}: {} chars", page + 1, text.len()),
+            Ok((page, None))       => println!("page {}: scanned — no text layer", page + 1),
+            Err(e)                 => eprintln!("page: error — {e}"),
         }
     }
 
@@ -61,24 +62,33 @@ use docuparse::{init_pdfium, PdfDocument, RenderConfig};
 let pdfium = init_pdfium()?;
 let doc = PdfDocument::open(pdfium, "document.pdf")?;
 
-let config = RenderConfig {
-    dpi: 150,
-    ..RenderConfig::default()
-};
+let config = RenderConfig::builder()
+    .dpi(150)
+    .with_annotations(true)
+    .build();
 
 let image = doc.render_page(0, &config)?;
 image.save("page_1.png")?;
 ```
 
+### Batch Rendering
+
+```rust
+let images = doc.render_all_pages(&config)?;
+for (i, image) in images.iter().enumerate() {
+    image.save(format!("page_{:03}.png", i + 1))?;
+}
+```
+
 ## Performance
 
 Benchmarked on a representative mixed PDF document (native text layers +
-scanned pages) on Apple Silicon(M4):
+scanned pages) on Apple Silicon (M4):
 
 | Metric | Value |
 |---|---|
-| Text extraction (12 pages) | ~8ms |
-| Per page | ~680µs |
+| Text extraction (12 pages) | ~8 ms |
+| Per page | ~680 µs |
 | Memory RSS | ~25 MB |
 | Child processes spawned | 0 |
 | Temp file I/O | none |
@@ -94,10 +104,10 @@ via [`thiserror`](https://github.com/dtolnay/thiserror) and compose cleanly
 with `anyhow` or `eyre` in application code:
 
 ```rust
-use docuparse::error::{PdfError, ValidationError};
+use docuparse::PdfError;
 
 match PdfDocument::open(pdfium, "file.pdf") {
-    Err(PdfError::Validation(ValidationError::InvalidMagicBytes)) => {
+    Err(PdfError::Validation(_)) => {
         eprintln!("not a valid PDF");
     }
     Err(e) => eprintln!("error: {e}"),
