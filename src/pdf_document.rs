@@ -3,37 +3,46 @@ use std::{
     sync::Arc,
 };
 
-use pdfium_render::prelude::{PdfPages, Pdfium};
+use pdfium_render::prelude::PdfPages;
 
 use crate::{
-    error::{PdfError, PdfiumError},
+    error::{PdfError, PdfiumInitError},
     metadata::PdfMetadata,
+    open_config::PdfOpenConfig,
+    pdfium_singleton::get_or_init_pdfium,
     validation,
 };
 
-pub struct PdfDocument<'pdfium> {
-    pdf_doc: pdfium_render::prelude::PdfDocument<'pdfium>,
+/// An open, validated PDF document.
+///
+/// Backed by a process-global `'static` pdfium binding - storable in structs
+/// and sendable across threads without lifetime annotations.
+pub struct PdfDocument {
+    pdf_doc: pdfium_render::prelude::PdfDocument<'static>,
     pub path: PathBuf,
     pub metadata: PdfMetadata,
 }
 
-impl<'pdfium> PdfDocument<'pdfium> {
-    fn load(
-        pdfium: &'pdfium Pdfium,
-        path: &Path,
-        password: Option<&str>,
-    ) -> Result<Self, PdfError> {
-        let path = path.to_path_buf();
-
+impl PdfDocument {
+    /// Load and validate a PDF from `path` using `config`.
+    ///
+    /// ```rust,no_run
+    /// # use pdf_parser::{PdfDocument, open_config::PdfOpenConfig};
+    /// let doc = PdfDocument::load("document.pdf", &PdfOpenConfig::builder().build())?;
+    /// # Ok::<(), pdf_parser::error::PdfError>(())
+    /// ```
+    pub fn load(path: impl AsRef<Path>, config: &PdfOpenConfig) -> Result<Self, PdfError> {
+        let path = path.as_ref().to_path_buf();
         validation::validate_pdf(&path)?;
 
-        let doc =
-            pdfium
-                .load_pdf_from_file(&path, password)
-                .map_err(|err| PdfiumError::LoadFailed {
-                    path: path.to_path_buf(),
-                    source: Arc::new(err),
-                })?;
+        let pdfium = get_or_init_pdfium()?;
+
+        let doc = pdfium
+            .load_pdf_from_file(&path, config.password.as_deref())
+            .map_err(|err| PdfiumInitError::LoadFailed {
+                path: path.clone(),
+                source: Arc::new(err),
+            })?;
 
         let metadata = PdfMetadata::from_doc(&doc, &path);
 
@@ -42,20 +51,6 @@ impl<'pdfium> PdfDocument<'pdfium> {
             path,
             metadata,
         })
-    }
-
-    /// Load and validate a PDF, binding it to the given pdfium instance.
-    pub fn open(pdfium: &'pdfium Pdfium, path: impl AsRef<Path>) -> Result<Self, PdfError> {
-        Self::load(pdfium, path.as_ref(), None)
-    }
-
-    /// Open a password-protected PDF.
-    pub fn open_with_password(
-        pdfium: &'pdfium Pdfium,
-        path: impl AsRef<Path>,
-        password: &str,
-    ) -> Result<Self, PdfError> {
-        Self::load(pdfium, path.as_ref(), Some(password))
     }
 
     pub fn page_count(&self) -> u32 {

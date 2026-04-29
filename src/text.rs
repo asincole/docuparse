@@ -5,7 +5,7 @@ use crate::{
     error::{PdfError, TextError},
 };
 
-impl<'p> PdfDocument<'p> {
+impl PdfDocument {
     /// Extract the native text layer from a page.
     ///
     /// Returns `Ok(None)` if the page exists but has no text layer (e.g. scanned image).
@@ -35,9 +35,9 @@ impl<'p> PdfDocument<'p> {
 
     /// Returns a lazy iterator of `(page_index, Option<text>)` for every page.
     ///
-    /// `Ok((i, Some(text)))` — page has a native text layer.
-    /// `Ok((i, None))`       — page exists but has no text layer (scanned); needs OCR.
-    /// `Err(_)`              — pdfium failed to access or extract from the page.
+    /// `Ok((i, Some(text)))` - page has a native text layer.
+    /// `Ok((i, None))`       - page exists but has no text layer (scanned); needs OCR.
+    /// `Err(_)`              - pdfium failed to access or extract from the page.
     pub fn extract_all_text_layers(
         &self,
     ) -> impl Iterator<Item = Result<(u32, Option<String>), PdfError>> {

@@ -195,7 +195,7 @@ mod tests {
     #[rstest]
     fn test_empty_file(temp_dir: TempDir) {
         // An empty file fails TooSmall before it ever reaches magic byte
-        // validation — this is the correct pipeline behaviour.
+        // validation - this is the correct pipeline behaviour.
         let empty = temp_dir.path().join("empty.pdf");
         fs::write(&empty, b"").expect("write empty");
         let err = validate_pdf(&empty).unwrap_err();

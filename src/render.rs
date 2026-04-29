@@ -19,7 +19,7 @@ pub struct RenderConfig {
     pub max_dimension_px: i32,
 }
 
-impl<'p> PdfDocument<'p> {
+impl PdfDocument {
     pub fn render_page(
         &self,
         page_index: u32,
@@ -41,7 +41,7 @@ impl<'p> PdfDocument<'p> {
                 },
             })?;
 
-        // PdfPoints are 1/72 inch — multiply by dpi/72 to get target pixel dimensions.
+        // PdfPoints are 1/72 inch - multiply by dpi/72 to get target pixel dimensions.
         // All geometry stays in f32 until the single final cast to i32.
         let scale = config.dpi as f32 / 72.0;
         let width_f = page.width().value * scale;

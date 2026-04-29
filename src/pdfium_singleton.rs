@@ -3,25 +3,25 @@ use std::{env, path::PathBuf, sync::Arc};
 use once_cell::sync::OnceCell;
 use pdfium_render::prelude::Pdfium;
 
-use crate::error::PdfiumError;
+use crate::error::PdfiumInitError;
 
 static PDFIUM: OnceCell<Pdfium> = OnceCell::new();
 
 /// Returns a Thread-safe `'static` reference to the lazily-initialised pdfium binding.
 ///
-/// Reads `PDFIUM_LIB_PATH` from the environment — fails explicitly if unset.
+/// Reads `PDFIUM_LIB_PATH` from the environment - fails explicitly if unset.
 /// The result is cached for the lifetime of the process; subsequent calls are
 /// lock-free reads of the `OnceCell`.
-pub fn get_or_init_pdfium() -> Result<&'static Pdfium, PdfiumError> {
+pub fn get_or_init_pdfium() -> Result<&'static Pdfium, PdfiumInitError> {
     PDFIUM
         .get_or_try_init(|| {
             let lib_path = env::var("PDFIUM_LIB_PATH")
                 .map(PathBuf::from)
-                .map_err(|_| PdfiumError::MissingLibPath)?;
+                .map_err(|_| PdfiumInitError::MissingLibPath)?;
 
             Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path(&lib_path))
                 .map(Pdfium::new)
-                .map_err(|source| PdfiumError::InitFailed {
+                .map_err(|source| PdfiumInitError::InitFailed {
                     source: Arc::new(source),
                 })
         })

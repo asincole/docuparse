@@ -2,6 +2,7 @@
 
 mod error;
 mod metadata;
+mod open_config;
 mod pdf_document;
 mod pdfium_singleton;
 pub mod render;
@@ -11,6 +12,7 @@ mod validation;
 
 pub use error::PdfError;
 pub use metadata::PdfMetadata;
+pub use open_config::PdfOpenConfig;
 pub use pdf_document::PdfDocument;
-pub use pdfium_singleton::get_or_init_pdfium as init_pdfium;
 pub use render::{RenderConfig, RenderConfigBuilder};
+pub use utils::contains_real_words;

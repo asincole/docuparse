@@ -3,21 +3,21 @@
 High-performance document extraction library for Rust.
 
 Extracts text and renders pages from PDF documents using the
-[Pdfium](https://pdfium.googlesource.com/pdfium/) engine — the same C++ library
+[Pdfium](https://pdfium.googlesource.com/pdfium/) engine - the same C++ library
 used by Google Chrome.
 
 ## Features
 
-- **Native text extraction** — extracts text directly from PDF text layers,
+- **Native text extraction** - extracts text directly from PDF text layers,
   no OCR required for digitally generated documents
-- **Page rendering** — renders PDF pages to images at configurable DPI with
+- **Page rendering** - renders PDF pages to images at configurable DPI with
   optional annotation rendering and dimension clamping
-- **Automatic page classification** — detects whether a page has a native
+- **Automatic page classification** - detects whether a page has a native
   text layer or is scanned
-- **PDF validation** — magic byte checking, size guards, existence checks
-- **Document metadata** — title, author, page count, file size, PDF version
-- **Zero intermediate files** — everything in memory, no temp file I/O
-- **Pdfium singleton** — initialised once, borrowed across your application
+- **PDF validation** - magic byte checking, size guards, existence checks
+- **Document metadata** - title, author, page count, file size, PDF version
+- **Zero intermediate files** - everything in memory, no temp file I/O
+- **Pdfium singleton** - initialised once, borrowed across your application
 
 ## Installation
 
@@ -45,8 +45,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for result in doc.extract_all_text_layers() {
         match result {
             Ok((page, Some(text))) => println!("page {}: {} chars", page + 1, text.len()),
-            Ok((page, None))       => println!("page {}: scanned — no text layer", page + 1),
-            Err(e)                 => eprintln!("page: error — {e}"),
+            Ok((page, None))       => println!("page {}: scanned - no text layer", page + 1),
+            Err(e)                 => eprintln!("page: error - {e}"),
         }
     }
 
@@ -94,7 +94,7 @@ scanned pages) on Apple Silicon (M4):
 | Temp file I/O | none |
 
 Performance is dominated by the Pdfium C++ engine. The Rust wrapper
-contributes negligible overhead — dev and release builds measure
+contributes negligible overhead - dev and release builds measure
 identically, confirming zero Rust-level bottleneck.
 
 ## Error Handling

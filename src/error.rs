@@ -14,7 +14,7 @@ pub enum ValidationError {
     #[error("file too large ({size_mb} MB, maximum {max_mb} MB)")]
     FileTooLarge { size_mb: u64, max_mb: u64 },
 
-    #[error("invalid PDF — missing %PDF- header")]
+    #[error("invalid PDF - missing %PDF- header")]
     InvalidMagicBytes,
 
     #[error("io error reading `{}`: {source}", path.display())]
@@ -70,7 +70,7 @@ pub enum TextError {
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
-pub enum PdfiumError {
+pub enum PdfiumInitError {
     #[error("PDFIUM_LIB_PATH environment variable is not set")]
     MissingLibPath,
 
@@ -91,15 +91,12 @@ pub enum PdfiumError {
     Internal(Arc<dyn std::error::Error + Send + Sync>),
 }
 
-/// The sole error type that crosses the library boundary.
-/// All domain errors compose into this via `#[from]`.
-#[derive(Debug, thiserror::Error)]
 pub enum PdfError {
     #[error(transparent)]
     Validation(#[from] ValidationError),
 
     #[error(transparent)]
-    Pdfium(#[from] PdfiumError),
+    Pdfium(#[from] PdfiumInitError),
 
     #[error(transparent)]
     Render(#[from] RenderError),
