@@ -1,6 +1,9 @@
+#[cfg(feature = "ocr")]
+use crate::ocr::OcrBackend;
+
 /// Configuration for opening PDF documents.
 ///
-/// Construct once and pass by reference to [`PdfDocument::load`].
+/// Construct once and pass by reference to [`crate::PdfDocument::load`].
 /// `Arc` fields are cloned on each `load` call - no model reload.
 ///
 /// ```rust,no_run
@@ -21,4 +24,9 @@ pub struct PdfOpenConfig {
     /// Password for encrypted PDFs.
     #[builder(into)]
     pub password: Option<String>,
+
+    /// OCR backend shared across all documents opened with this config.
+    /// Only present with the `ocr` feature.
+    #[cfg(feature = "ocr")]
+    pub ocr_backend: Option<std::sync::Arc<dyn OcrBackend>>,
 }

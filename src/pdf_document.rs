@@ -62,6 +62,9 @@ pub struct PdfDocument {
     pdf_doc: pdfium_render::prelude::PdfDocument<'static>,
     pub path: PathBuf,
     pub metadata: PdfMetadata,
+
+    #[cfg(feature = "ocr")]
+    pub(crate) ocr_backend: Option<Arc<dyn crate::ocr::OcrBackend>>,
 }
 
 #[cfg_attr(feature = "hotpath", hotpath::measure_all)]
@@ -95,6 +98,8 @@ impl PdfDocument {
             pdf_doc: doc,
             path,
             metadata,
+            #[cfg(feature = "ocr")]
+            ocr_backend: config.ocr_backend.clone(),
         })
     }
 
@@ -104,5 +109,22 @@ impl PdfDocument {
 
     pub fn pages(&self) -> &PdfPages<'_> {
         self.pdf_doc.pages()
+    }
+
+    /// Returns the attached OCR backend, if any.
+    #[cfg(feature = "ocr")]
+    #[inline]
+    pub fn ocr_backend(&self) -> Option<&dyn crate::ocr::OcrBackend> {
+        self.ocr_backend.as_deref()
+    }
+
+    #[cfg(feature = "ocr")]
+    #[inline]
+    pub(crate) fn require_ocr_backend(
+        &self,
+    ) -> Result<&dyn crate::ocr::OcrBackend, crate::ocr::OcrError> {
+        self.ocr_backend
+            .as_deref()
+            .ok_or_else(|| crate::ocr::OcrError::BackendNotAttached.into())
     }
 }
