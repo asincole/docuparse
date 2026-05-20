@@ -5,7 +5,7 @@
 ///
 /// ```rust,no_run
 /// # use std::sync::Arc;
-/// # use pdf_parser::open_config::PdfOpenConfig;
+/// # use docuparse::PdfOpenConfig;
 /// // minimal
 /// let config = PdfOpenConfig::builder().build();
 ///
@@ -13,7 +13,7 @@
 /// let config = PdfOpenConfig::builder()
 ///     .password("secret".to_owned())
 ///     .build();
-/// # Ok::<(), pdf_parser::error::PdfError>(())
+/// # Ok::<(), docuparse::LoadError>(())
 /// ```
 #[derive(Clone, bon::Builder)]
 #[non_exhaustive]

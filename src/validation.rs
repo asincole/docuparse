@@ -5,22 +5,22 @@ use std::{
 };
 
 use crate::{
-    error::ValidationError,
+    pdf_document::LoadError,
     utils::{MAX_PDF_SIZE, MB, MIN_PDF_SIZE, PDF_MAGIC},
 };
 
-fn validate_metadata(meta: &fs::Metadata) -> Result<(), ValidationError> {
+fn validate_metadata(meta: &fs::Metadata) -> Result<(), LoadError> {
     let size = meta.len();
 
     if size < MIN_PDF_SIZE {
-        return Err(ValidationError::TooSmall {
+        return Err(LoadError::TooSmall {
             size,
             min: MIN_PDF_SIZE,
         });
     }
 
     if size > MAX_PDF_SIZE {
-        return Err(ValidationError::FileTooLarge {
+        return Err(LoadError::FileTooLarge {
             size_mb: size / MB,
             max_mb: MAX_PDF_SIZE / MB,
         });
@@ -29,45 +29,45 @@ fn validate_metadata(meta: &fs::Metadata) -> Result<(), ValidationError> {
     Ok(())
 }
 
-fn validate_magic_bytes(file: &mut File, path: &Path) -> Result<(), ValidationError> {
+fn validate_magic_bytes(file: &mut File, path: &Path) -> Result<(), LoadError> {
     let mut header: [u8; 5] = [0u8; PDF_MAGIC.len()];
 
     file.read_exact(&mut header)
-        .map_err(|source| ValidationError::Io {
+        .map_err(|source| LoadError::Io {
             path: path.to_path_buf(),
             source,
         })?;
 
     if header != *PDF_MAGIC {
-        return Err(ValidationError::InvalidMagicBytes);
+        return Err(LoadError::InvalidMagicBytes);
     }
 
     Ok(())
 }
 
-pub fn validate_pdf(path: &Path) -> Result<(), ValidationError> {
+pub(crate) fn validate_pdf(path: &Path) -> Result<File, LoadError> {
     let mut file = match File::open(path) {
         Ok(f) => f,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            return Err(ValidationError::NotFound {
+            return Err(LoadError::NotFound {
                 path: path.to_path_buf(),
             });
         }
         Err(source) => {
-            return Err(ValidationError::Io {
+            return Err(LoadError::Io {
                 path: path.to_path_buf(),
                 source,
             });
         }
     };
 
-    let meta = file.metadata().map_err(|source| ValidationError::Io {
+    let meta = file.metadata().map_err(|source| LoadError::Io {
         path: path.to_path_buf(),
         source,
     })?;
 
     if !meta.is_file() {
-        return Err(ValidationError::NotAFile {
+        return Err(LoadError::NotAFile {
             path: path.to_path_buf(),
         });
     }
@@ -75,21 +75,18 @@ pub fn validate_pdf(path: &Path) -> Result<(), ValidationError> {
     validate_metadata(&meta)?;
     validate_magic_bytes(&mut file, path)?;
 
-    Ok(())
+    Ok(file)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, io::Write, path::PathBuf};
+    use std::{fs, io::Write};
 
     use rstest::{fixture, rstest};
     use tempfile::{NamedTempFile, TempDir};
 
     use super::*;
 
-    // ── fixtures ─────────────────────────────────────────────────────────────────
-
-    /// A valid, minimal PDF file on disk.
     #[fixture]
     fn valid_pdf() -> NamedTempFile {
         let mut f = NamedTempFile::new().expect("tempfile");
@@ -99,8 +96,6 @@ mod tests {
         f
     }
 
-    /// A temp file whose content is deliberately not a PDF (wrong magic),
-    /// but large enough to pass the size check.
     #[fixture]
     fn non_pdf_file() -> NamedTempFile {
         let mut f = NamedTempFile::new().expect("tempfile");
@@ -111,7 +106,6 @@ mod tests {
         f
     }
 
-    /// A temp file that is too small (below MIN_PDF_SIZE), but has correct magic.
     #[fixture]
     fn too_small_pdf() -> NamedTempFile {
         let mut f = NamedTempFile::new().expect("tempfile");
@@ -119,7 +113,6 @@ mod tests {
         f
     }
 
-    /// A temp file that exceeds MAX_PDF_SIZE.
     #[fixture]
     fn too_large_pdf() -> NamedTempFile {
         let mut f = NamedTempFile::new().expect("tempfile");
@@ -129,41 +122,35 @@ mod tests {
         f
     }
 
-    /// A TempDir used to derive paths that simply do not exist.
     #[fixture]
     fn temp_dir() -> TempDir {
         tempfile::tempdir().expect("tempdir")
     }
 
-    // ── existence / file-type checks ─────────────────────────────────────────────
     #[rstest]
-    fn test_missing_path() {
-        let ghost = PathBuf::from("/tmp/__docuparse_ghost_path_that_cannot_exist__.pdf");
+    fn test_missing_path(temp_dir: TempDir) {
+        let ghost = temp_dir.path().join("ghost_that_does_not_exist.pdf");
         let err = validate_pdf(&ghost).unwrap_err();
         assert!(
-            matches!(err, ValidationError::NotFound { .. }),
+            matches!(err, LoadError::NotFound { .. }),
             "expected NotFound, got {err:?}"
         );
     }
 
     #[rstest]
-    fn test_path_is_directory() {
-        let temp_dir = tempfile::tempdir().expect("tempdir");
-
+    fn test_path_is_directory(temp_dir: TempDir) {
         let err = validate_pdf(temp_dir.path()).unwrap_err();
         assert!(
-            matches!(err, ValidationError::NotAFile { .. }),
+            matches!(err, LoadError::NotAFile { .. }),
             "expected NotAFile, got {err:?}"
         );
     }
-
-    // ── size checks ───────────────────────────────────────────────────────────────
 
     #[rstest]
     fn test_too_small(too_small_pdf: NamedTempFile) {
         let err = validate_pdf(too_small_pdf.path()).unwrap_err();
         assert!(
-            matches!(err, ValidationError::TooSmall { .. }),
+            matches!(err, LoadError::TooSmall { .. }),
             "expected TooSmall, got {err:?}"
         );
     }
@@ -171,54 +158,62 @@ mod tests {
     #[rstest]
     fn test_too_large(too_large_pdf: NamedTempFile) {
         let err = validate_pdf(too_large_pdf.path()).unwrap_err();
-        assert!(
-            matches!(err, ValidationError::FileTooLarge { .. }),
-            "expected FileTooLarge, got {err:?}"
-        );
 
-        if let ValidationError::FileTooLarge { max_mb, .. } = err {
-            assert_eq!(max_mb, MAX_PDF_SIZE / MB);
-        }
+        let LoadError::FileTooLarge { size_mb: _, max_mb } = err else {
+            panic!("expected FileTooLarge, got {err:?}");
+        };
+
+        assert_eq!(max_mb, MAX_PDF_SIZE / MB);
     }
-
-    // ── magic byte checks ─────────────────────────────────────────────────────────
 
     #[rstest]
     fn test_wrong_magic(non_pdf_file: NamedTempFile) {
         let err = validate_pdf(non_pdf_file.path()).unwrap_err();
         assert!(
-            matches!(err, ValidationError::InvalidMagicBytes),
+            matches!(err, LoadError::InvalidMagicBytes),
             "expected InvalidMagicBytes, got {err:?}"
         );
     }
 
     #[rstest]
+    fn test_wrong_magic_at_minimum_size(temp_dir: TempDir) {
+        // Pins validation order: size passes, magic fires.
+        // If someone reorders the checks, this test breaks.
+        let path = temp_dir.path().join("wrong_magic_min_size.pdf");
+        let mut content = b"NOT_PDF!".to_vec();
+        content.resize(MIN_PDF_SIZE as usize, 0);
+        fs::write(&path, &content).expect("write");
+
+        let err = validate_pdf(&path).unwrap_err();
+        assert!(
+            matches!(err, LoadError::InvalidMagicBytes),
+            "expected InvalidMagicBytes on min-size file with wrong magic, got {err:?}"
+        );
+    }
+
+    #[rstest]
     fn test_empty_file(temp_dir: TempDir) {
-        // An empty file fails TooSmall before it ever reaches magic byte
-        // validation - this is the correct pipeline behaviour.
+        // Empty file fails TooSmall before reaching magic byte validation -
+        // this is the correct pipeline order.
         let empty = temp_dir.path().join("empty.pdf");
         fs::write(&empty, b"").expect("write empty");
         let err = validate_pdf(&empty).unwrap_err();
         assert!(
-            matches!(err, ValidationError::TooSmall { .. }),
+            matches!(err, LoadError::TooSmall { .. }),
             "expected TooSmall on empty file, got {err:?}"
         );
     }
-
-    // ── happy path ────────────────────────────────────────────────────────────────
 
     #[rstest]
     fn test_validate_pdf_happy_path(valid_pdf: NamedTempFile) {
         assert!(validate_pdf(valid_pdf.path()).is_ok());
     }
 
-    // ── parametric: boundary values around MIN_PDF_SIZE ──────────────────────────
-
     #[rstest]
     #[case(MIN_PDF_SIZE - 1, true)]
     #[case(MIN_PDF_SIZE, false)]
     #[case(MIN_PDF_SIZE + 1, false)]
-    fn test_size_boundary(#[case] size: u64, #[case] expect_err: bool, temp_dir: TempDir) {
+    fn test_min_size_boundary(#[case] size: u64, #[case] expect_err: bool, temp_dir: TempDir) {
         let path = temp_dir.path().join("boundary.pdf");
         let mut content = PDF_MAGIC.to_vec();
         let body_len = (size as usize).saturating_sub(PDF_MAGIC.len());
@@ -233,8 +228,6 @@ mod tests {
             "size={size}, expect_err={expect_err}, got={result:?}"
         );
     }
-
-    // ── parametric: boundary values around MAX_PDF_SIZE ──────────────────────────
 
     #[rstest]
     #[case(MAX_PDF_SIZE - 1, false)]

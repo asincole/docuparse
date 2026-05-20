@@ -1,10 +1,37 @@
+use std::sync::Arc;
+
 use image::DynamicImage;
 use pdfium_render::prelude::{PdfPageIndex, PdfRenderConfig};
 
-use crate::{
-    error::{PdfError, RenderError},
-    pdf_document::PdfDocument,
-};
+use crate::pdf_document::PdfDocument;
+
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum RenderError {
+    #[error("page {page} is out of range (document has {total} pages)")]
+    PageOutOfRange { page: u32, total: u32 },
+
+    #[error("failed to render page {page} to bitmap")]
+    RenderFailed {
+        page: u32,
+        #[source]
+        source: Arc<dyn std::error::Error + Send + Sync>,
+    },
+
+    #[error("failed to convert rendered bitmap to image on page {page}")]
+    BitmapConversionFailed {
+        page: u32,
+        #[source]
+        source: Arc<dyn std::error::Error + Send + Sync>,
+    },
+
+    #[error("page {page} has degenerate geometry (width={width_f}, height={height_f})")]
+    DegenerateGeometry {
+        page: u32,
+        width_f: f32,
+        height_f: f32,
+    },
+}
 
 #[derive(Debug, Clone, bon::Builder)]
 #[non_exhaustive]
@@ -19,16 +46,17 @@ pub struct RenderConfig {
     pub max_dimension_px: i32,
 }
 
+#[cfg_attr(feature = "hotpath", hotpath::measure_all)]
 impl PdfDocument {
     pub fn render_page(
         &self,
         page_index: u32,
         config: &RenderConfig,
-    ) -> Result<DynamicImage, PdfError> {
+    ) -> Result<DynamicImage, RenderError> {
         let page = self
             .pages()
             .get(page_index as PdfPageIndex)
-            .map_err(|source| match source {
+            .map_err(|err| match err {
                 pdfium_render::prelude::PdfiumError::PageIndexOutOfBounds => {
                     RenderError::PageOutOfRange {
                         page: page_index,
@@ -37,7 +65,7 @@ impl PdfDocument {
                 }
                 _ => RenderError::RenderFailed {
                     page: page_index,
-                    source,
+                    source: Arc::new(err),
                 },
             })?;
 
@@ -56,8 +84,7 @@ impl PdfDocument {
                 page: page_index,
                 width_f,
                 height_f,
-            }
-            .into());
+            });
         }
 
         // Clamp to max_dimension_px while staying in f32 to avoid
@@ -87,21 +114,24 @@ impl PdfDocument {
         // internal bitmap. At high DPI this is a significant allocation.
         let image = page
             .render_with_config(&render_cfg)
-            .map_err(|source| RenderError::RenderFailed {
+            .map_err(|err| RenderError::RenderFailed {
                 page: page_index,
-                source,
+                source: Arc::new(err),
             })?
             .as_image()
-            .map_err(|source| RenderError::BitmapConversionFailed {
+            .map_err(|err| RenderError::BitmapConversionFailed {
                 page: page_index,
-                source,
+                source: Arc::new(err),
             })?;
 
         Ok(image)
     }
 
     /// Render all pages. Fails fast on the first page that cannot be rendered.
-    pub fn render_all_pages(&self, config: &RenderConfig) -> Result<Vec<DynamicImage>, PdfError> {
+    pub fn render_all_pages(
+        &self,
+        config: &RenderConfig,
+    ) -> Result<Vec<DynamicImage>, RenderError> {
         (0..self.page_count())
             .map(|i| self.render_page(i, config))
             .collect()

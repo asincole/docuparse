@@ -6,12 +6,53 @@ use std::{
 use pdfium_render::prelude::PdfPages;
 
 use crate::{
-    error::{PdfError, PdfiumInitError},
     metadata::PdfMetadata,
     open_config::PdfOpenConfig,
-    pdfium_singleton::get_or_init_pdfium,
+    pdfium_singleton::{InitError, get_or_init_pdfium},
     validation,
 };
+
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
+pub enum LoadError {
+    #[error("PDFIUM_LIB_PATH environment variable is not set")]
+    PdfiumLibPathNotSet,
+
+    #[error("PDFium library could not be initialised")]
+    PdfiumInit {
+        #[source]
+        source: Arc<dyn std::error::Error + Send + Sync>,
+    },
+
+    #[error("failed to load PDF '{}'", path.display())]
+    ParseFailed {
+        path: PathBuf,
+        #[source]
+        source: Arc<dyn std::error::Error + Send + Sync>,
+    },
+
+    #[error("file not found: {}", path.display())]
+    NotFound { path: PathBuf },
+
+    #[error("path is not a file: {}", path.display())]
+    NotAFile { path: PathBuf },
+
+    #[error("file too small to be a valid PDF ({size} bytes, minimum {min} bytes)")]
+    TooSmall { size: u64, min: u64 },
+
+    #[error("file too large ({size_mb} MB, maximum {max_mb} MB)")]
+    FileTooLarge { size_mb: u64, max_mb: u64 },
+
+    #[error("invalid PDF - missing %PDF- header")]
+    InvalidMagicBytes,
+
+    #[error("io error reading '{}': {source}", path.display())]
+    Io {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+}
 
 /// An open, validated PDF document.
 ///
@@ -23,23 +64,27 @@ pub struct PdfDocument {
     pub metadata: PdfMetadata,
 }
 
+#[cfg_attr(feature = "hotpath", hotpath::measure_all)]
 impl PdfDocument {
     /// Load and validate a PDF from `path` using `config`.
     ///
     /// ```rust,no_run
-    /// # use pdf_parser::{PdfDocument, open_config::PdfOpenConfig};
+    /// # use docuparse::{PdfDocument, PdfOpenConfig};
     /// let doc = PdfDocument::load("document.pdf", &PdfOpenConfig::builder().build())?;
-    /// # Ok::<(), pdf_parser::error::PdfError>(())
+    /// # Ok::<(), docuparse::LoadError>(())
     /// ```
-    pub fn load(path: impl AsRef<Path>, config: &PdfOpenConfig) -> Result<Self, PdfError> {
+    pub fn load(path: impl AsRef<Path>, config: &PdfOpenConfig) -> Result<Self, LoadError> {
         let path = path.as_ref().to_path_buf();
-        validation::validate_pdf(&path)?;
+        let file = validation::validate_pdf(&path)?;
 
-        let pdfium = get_or_init_pdfium()?;
+        let pdfium = get_or_init_pdfium().map_err(|e| match e {
+            InitError::MissingLibPath => LoadError::PdfiumLibPathNotSet,
+            InitError::BindFailed { source } => LoadError::PdfiumInit { source },
+        })?;
 
         let doc = pdfium
-            .load_pdf_from_file(&path, config.password.as_deref())
-            .map_err(|err| PdfiumInitError::LoadFailed {
+            .load_pdf_from_reader(file, config.password.as_deref())
+            .map_err(|err| LoadError::ParseFailed {
                 path: path.clone(),
                 source: Arc::new(err),
             })?;
