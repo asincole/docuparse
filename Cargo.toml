@@ -20,6 +20,22 @@ exclude = [
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[[example]]
+name = "ocr_onnx"
+required-features = ["ocr-onnx"]
+
+[[example]]
+name = "ocr_openai"
+required-features = ["ocr-openai"]
+
+[[example]]
+name = "ocr_parallel"
+required-features = ["ocr-onnx", "parallel"]
+
+[[test]]
+name = "onnx_integration"
+required-features = ["ocr-onnx"]
+
 [dependencies]
 bon = "3.9.1"
 image = "0.25.10"
@@ -48,6 +64,8 @@ ocr = []
 parallel = ["dep:rayon"]
 hotpath = ["hotpath/hotpath"]
 hotpath-alloc = ["hotpath/hotpath-alloc", "hotpath"]
+ocr-onnx = ["ocr", "dep:oar-ocr"]
+ocr-openai = ["ocr", "dep:reqwest", "dep:base64", "dep:serde_json", "dep:serde", "dep:turbojpeg"]
 
 [profile.dev]
 opt-level = 1

@@ -16,6 +16,16 @@ use crate::ocr::OcrBackend;
 /// let config = PdfOpenConfig::builder()
 ///     .password("secret".to_owned())
 ///     .build();
+///
+/// // with OCR backend
+/// # #[cfg(feature = "ocr-onnx")]
+/// # {
+/// use docuparse::ocr::{OcrBackend, OnnxOcrBackend};
+/// let backend = OnnxOcrBackend::from_env().expect("OCR env vars must be set");
+/// let config = PdfOpenConfig::builder()
+///     .ocr_backend(Arc::new(backend) as Arc<dyn OcrBackend>)
+///     .build();
+/// # }
 /// # Ok::<(), docuparse::LoadError>(())
 /// ```
 #[derive(Clone, bon::Builder)]

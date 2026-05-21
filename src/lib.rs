@@ -13,6 +13,10 @@ mod utils;
 mod validation;
 
 pub use metadata::PdfMetadata;
+#[cfg(feature = "ocr-onnx")]
+pub use ocr::OnnxOcrBackend;
+#[cfg(feature = "ocr-openai")]
+pub use ocr::{LlamaServerBackend, LlamaServerConfig, LlamaServerConfigBuilder};
 #[cfg(feature = "ocr")]
 pub use ocr::{
     OcrBackend, OcrConfig, OcrConfigBuilder, OcrError, OcrPageResult, OcrPageResultBuilder,

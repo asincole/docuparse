@@ -5,6 +5,15 @@ use std::{path::PathBuf, sync::Arc};
 
 pub use backend::{OcrBackend, OcrConfig, OcrConfigBuilder, OcrPageResult, OcrPageResultBuilder};
 
+#[cfg(feature = "ocr-onnx")]
+mod onnx_backend;
+#[cfg(feature = "ocr-onnx")]
+pub use onnx_backend::OnnxOcrBackend;
+#[cfg(feature = "ocr-openai")]
+mod llama_backend;
+#[cfg(feature = "ocr-openai")]
+pub use llama_backend::{LlamaServerBackend, LlamaServerConfig, LlamaServerConfigBuilder};
+
 /// OCR subsystem errors.
 ///
 /// `source` fields use `Arc<dyn Error + Send + Sync>` rather than `Box` so
