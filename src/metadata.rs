@@ -8,7 +8,7 @@ use crate::utils::{KB, MB};
 /// Cheap to clone, derived once in `PdfDocument::open`.
 #[derive(Debug, Clone)]
 pub struct PdfMetadata {
-    /// Derived from the file stem — "Test_file.pdf" → "Test_file"
+    /// Derived from the file stem - "Test_file.pdf" → "Test_file"
     pub pdf_name: String,
 
     /// Total number of pages
@@ -56,7 +56,7 @@ impl PdfMetadata {
                 PdfDocumentMetadataTagType::Subject => subject = value,
                 PdfDocumentMetadataTagType::Creator => creator = value,
                 PdfDocumentMetadataTagType::Producer => producer = value,
-                // TODO: Keywords, CreationDate, ModificationDate — ignored for now
+                // TODO: Keywords, CreationDate, ModificationDate - ignored for now
                 _ => {}
             }
         }

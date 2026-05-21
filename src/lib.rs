@@ -1,16 +1,28 @@
-//! docuparse - PDF loading, rendering and text extraction
+#![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
-mod error;
 mod metadata;
+#[cfg(feature = "ocr")]
+pub mod ocr;
+mod open_config;
 mod pdf_document;
 mod pdfium_singleton;
-pub mod render;
+mod render;
 mod text;
 mod utils;
 mod validation;
 
-pub use error::PdfError;
 pub use metadata::PdfMetadata;
-pub use pdf_document::PdfDocument;
-pub use pdfium_singleton::get_or_init_pdfium as init_pdfium;
-pub use render::{RenderConfig, RenderConfigBuilder};
+#[cfg(feature = "ocr-onnx")]
+pub use ocr::OnnxOcrBackend;
+#[cfg(feature = "ocr-openai")]
+pub use ocr::{LlamaServerBackend, LlamaServerConfig, LlamaServerConfigBuilder};
+#[cfg(feature = "ocr")]
+pub use ocr::{
+    OcrBackend, OcrConfig, OcrConfigBuilder, OcrError, OcrPageResult, OcrPageResultBuilder,
+};
+pub use open_config::{PdfOpenConfig, PdfOpenConfigBuilder};
+pub use pdf_document::{LoadError, PdfDocument};
+pub use render::{RenderConfig, RenderConfigBuilder, RenderError};
+pub use text::TextError;
+pub use utils::contains_real_words;
