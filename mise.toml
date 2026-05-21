@@ -1,2 +1,36 @@
 [tasks.coverage]
 run = "cargo llvm-cov nextest --html --open"
+
+[tasks.fmt]
+description = "Format with nightly rustfmt"
+tools.rust = "nightly"
+run = "cargo fmt"
+
+[tasks.fmt-check]
+description = "Check formatting (CI)"
+tools.rust = "nightly"
+run = "cargo fmt --check"
+
+[tasks.lint]
+description = "Clippy lints"
+run = "cargo clippy -- -D warnings"
+
+[tasks.test]
+description = "Run tests (nextest for unit/integration, cargo test for doctests)"
+tools.rust = "nightly"
+env = { RUSTDOCFLAGS = "--cfg docsrs", CARGO_TERM_COLOR = "always" }
+run = [
+    "cargo nextest run --all-features",
+    "cargo test --doc --all-features -- --color always",
+]
+
+[tasks.test-doc]
+description = "Doc tests only"
+env = { RUSTDOCFLAGS = "--cfg docsrs" }
+run = "cargo test --doc --all-features"
+
+[tasks.docs]
+description = "Build docs locally (nightly)"
+tools.rust = "nightly"
+env = { RUSTDOCFLAGS = "--cfg docsrs" }
+run = "cargo doc --all-features --no-deps --open"

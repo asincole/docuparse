@@ -1,4 +1,5 @@
 /target
 /pdfium-lib
 lcov.info
-/examples
+/examples/fixtures
+.DS_Store
