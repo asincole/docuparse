@@ -125,6 +125,6 @@ impl PdfDocument {
     ) -> Result<&dyn crate::ocr::OcrBackend, crate::ocr::OcrError> {
         self.ocr_backend
             .as_deref()
-            .ok_or_else(|| crate::ocr::OcrError::BackendNotAttached.into())
+            .ok_or_else(|| crate::ocr::OcrError::BackendNotAttached)
     }
 }

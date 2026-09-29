@@ -21,13 +21,12 @@ where
     R: Fn(u32) -> Result<image::DynamicImage, OcrError>,
 {
     let image = render(page_index)?;
-    backend.run(&image, page_index, ocr_config).map_err(|e| {
-        OcrError::InferenceFailed {
+    backend
+        .run(&image, page_index, ocr_config)
+        .map_err(|e| OcrError::InferenceFailed {
             page: page_index,
             source: Arc::from(e),
-        }
-        .into()
-    })
+        })
 }
 
 /// Sequential bulk: fails fast on first error.
@@ -73,12 +72,12 @@ where
         let chunk_results: Result<Vec<_>, _> = chunk_images?
             .into_par_iter()
             .map(|(i, image)| {
-                backend.run(&image, i, ocr_config).map_err(|e| {
-                    OcrError::from(OcrError::InferenceFailed {
+                backend
+                    .run(&image, i, ocr_config)
+                    .map_err(|e| OcrError::InferenceFailed {
                         page: i,
                         source: Arc::from(e),
                     })
-                })
             })
             .collect();
 
@@ -89,6 +88,7 @@ where
 }
 
 /// Pipelined: bounded channel between render thread and inference thread.
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
 pub(crate) fn ocr_pipeline_with<R>(
     page_count: u32,
     render: R,
@@ -132,17 +132,14 @@ where
         .join()
         .map_err(|_| OcrError::InferenceFailed {
             page: page_count.saturating_sub(1),
-            source: Arc::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "OCR inference thread panicked",
-            )),
+            source: Arc::new(std::io::Error::other("OCR inference thread panicked")),
         })?
         .into_iter()
         .enumerate()
         .map(|(i, r)| {
             r.map_err(|e| OcrError::InferenceFailed {
                 page: i as u32,
-                source: Arc::new(std::io::Error::new(std::io::ErrorKind::Other, e)),
+                source: Arc::new(std::io::Error::other(e)),
             })
         })
         .collect()
@@ -171,13 +168,12 @@ impl PdfDocument {
         config: &OcrConfig,
     ) -> Result<OcrPageResult, OcrError> {
         let backend = self.require_ocr_backend()?;
-        backend.run(image, page_index, config).map_err(|e| {
-            OcrError::InferenceFailed {
+        backend
+            .run(image, page_index, config)
+            .map_err(|e| OcrError::InferenceFailed {
                 page: page_index,
                 source: Arc::from(e),
-            }
-            .into()
-        })
+            })
     }
 
     /// Render a page then immediately run OCR on the result.
