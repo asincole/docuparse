@@ -74,6 +74,26 @@ impl PdfMetadata {
         }
     }
 
+    pub fn pdf_version_string(&self) -> Option<String> {
+        let version = match self.pdf_version {
+            PdfDocumentVersion::Unset => return None,
+            PdfDocumentVersion::Pdf1_0 => "1.0",
+            PdfDocumentVersion::Pdf1_1 => "1.1",
+            PdfDocumentVersion::Pdf1_2 => "1.2",
+            PdfDocumentVersion::Pdf1_3 => "1.3",
+            PdfDocumentVersion::Pdf1_4 => "1.4",
+            PdfDocumentVersion::Pdf1_5 => "1.5",
+            PdfDocumentVersion::Pdf1_6 => "1.6",
+            PdfDocumentVersion::Pdf1_7 => "1.7",
+            PdfDocumentVersion::Pdf2_0 => "2.0",
+            PdfDocumentVersion::Other(version) => {
+                return Some(format!("{}.{}", version / 10, version % 10));
+            }
+        };
+
+        Some(version.to_owned())
+    }
+
     /// Human-readable file size  e.g. "1.7 MB", "340 KB"
     pub fn file_size_display(&self) -> String {
         match self.file_size_bytes {
@@ -139,6 +159,31 @@ mod tests {
     #[case::one_and_half_mb(MB + MB / 2, "1.5 MB")]
     fn test_file_size_display(#[case] bytes: u64, #[case] expected: &str) {
         assert_eq!(metadata_with_size(bytes).file_size_display(), expected);
+    }
+
+    #[rstest]
+    #[case::unset(PdfDocumentVersion::Unset, None)]
+    #[case::pdf_1_0(PdfDocumentVersion::Pdf1_0, Some("1.0"))]
+    #[case::pdf_1_1(PdfDocumentVersion::Pdf1_1, Some("1.1"))]
+    #[case::pdf_1_2(PdfDocumentVersion::Pdf1_2, Some("1.2"))]
+    #[case::pdf_1_3(PdfDocumentVersion::Pdf1_3, Some("1.3"))]
+    #[case::pdf_1_4(PdfDocumentVersion::Pdf1_4, Some("1.4"))]
+    #[case::pdf_1_5(PdfDocumentVersion::Pdf1_5, Some("1.5"))]
+    #[case::pdf_1_6(PdfDocumentVersion::Pdf1_6, Some("1.6"))]
+    #[case::pdf_1_7(PdfDocumentVersion::Pdf1_7, Some("1.7"))]
+    #[case::pdf_2_0(PdfDocumentVersion::Pdf2_0, Some("2.0"))]
+    #[case::other_1_8(PdfDocumentVersion::Other(18), Some("1.8"))]
+    #[case::other_2_1(PdfDocumentVersion::Other(21), Some("2.1"))]
+    fn test_pdf_version_string(
+        #[case] version: PdfDocumentVersion,
+        #[case] expected: Option<&str>,
+    ) {
+        let metadata = PdfMetadata {
+            pdf_version: version,
+            ..metadata_with_size(0)
+        };
+
+        assert_eq!(metadata.pdf_version_string().as_deref(), expected);
     }
 
     #[rstest]
