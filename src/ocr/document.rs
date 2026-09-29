@@ -89,6 +89,7 @@ where
 }
 
 /// Pipelined: bounded channel between render thread and inference thread.
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
 pub(crate) fn ocr_pipeline_with<R>(
     page_count: u32,
     render: R,

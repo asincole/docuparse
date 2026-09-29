@@ -99,6 +99,7 @@ impl OnnxOcrBackend {
     ///
     /// Use when spatial layout data is required. For plain-text extraction
     /// prefer [`OcrBackend::run`] which is backend-agnostic.
+    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn run_detailed(
         &self,
         image: &DynamicImage,
@@ -128,6 +129,7 @@ impl OnnxOcrBackend {
 }
 
 impl OcrBackend for OnnxOcrBackend {
+    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn run(
         &self,
         image: &DynamicImage,

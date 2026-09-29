@@ -3,3 +3,4 @@
 lcov.info
 /examples/fixtures
 .DS_Store
+/models
