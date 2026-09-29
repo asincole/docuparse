@@ -1,14 +1,103 @@
+wrappers = { cargo = { command = "mbx", env = { MBX_CARGO_SHIM_MODE = "1" } } }
+
+[bootstrap.packages]
+"apt:build-essential" = { os = ["linux"] }
+"apt:pkg-config" = { os = ["linux"] }
+"apt:libssl-dev" = { os = ["linux"] }
+"apt:ca-certificates" = { os = ["linux"] }
+"apt:python3-venv" = { os = ["linux"] }
+"apt:cmake" = { os = ["linux"] }
+"apt:nasm" = { os = ["linux"] }
+
+[tools]
+rust = { version = "nightly-2026-08-30", mr_boxington = true, profile = "default", components = [
+  "rust-analyzer",
+  "llvm-tools",
+] }
+cargo-binstall = "1.20.0"
+"cargo:cargo-nextest" = { version = "0.9.143", depends = ["cargo-binstall"] }
+mr-boxington = "latest"
+
+[tools."http:pdfium"]
+version = "7881"
+
+[tools."http:pdfium".platforms]
+macos-arm64 = { url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/{{version}}/pdfium-mac-arm64.tgz", checksum = "sha256:52e94ca5aa8847934330daf3f8150c190682c5ca93831468794f8b90d4392e40" }
+macos-x64 = { url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/{{version}}/pdfium-mac-x64.tgz", checksum = "sha256:6dedf83990e0e3d6b7c93c9e7589c5a126b0ae14b7464d76120cff7a26afb18b" }
+linux-x64 = { url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/{{version}}/pdfium-linux-x64.tgz", checksum = "sha256:1470e21b8b4a3b4ad7f85684e2da11d94f3b69a86d81dee11b9b6709d927ac1d" }
+linux-arm64 = { url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/{{version}}/pdfium-linux-arm64.tgz", checksum = "sha256:ee7f7b7d5468958336a818c1cd580bdd20972846b7377b13f9a923d92d1d4674" }
+windows-x64 = { url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/{{version}}/pdfium-win-x64.tgz", checksum = "sha256:73cc0de638ac2095e7445bf56a38200a5b7c7ca0e9f4ba144598f2457377ac08" }
+
+[tasks.bootstrap]
+description = "Machine setup: pdfium lib + OCR models (system packages come from mise bootstrap)"
+depends = ["pdfium", "models"]
+
+[tasks.pdfium]
+description = "Install the pinned pdfium tool and sync its library into pdfium-lib/"
+tools = { "http:pdfium" = "7881" }
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+root="{{config_root}}/pdfium-lib"
+src="$(mise where http:pdfium)/lib"
+case "$(uname -s)" in
+  Darwin) lib=libpdfium.dylib ;;
+  Linux)  lib=libpdfium.so ;;
+  *)      echo "unsupported platform for pdfium sync" >&2; exit 1 ;;
+esac
+mkdir -p "$root"
+cp -f "$src/$lib" "$root/$lib"
+case "$(uname -s)" in
+  Darwin) codesign --force --sign - "$root/$lib" >/dev/null 2>&1 || true ;;
+esac
+'''
+
+[tasks.models]
+description = "Fetch pinned OCR models: PP-OCRv5 mobile + PP-OCRv6 small/medium"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+root="{{config_root}}/models"
+v6="https://github.com/GreatV/oar-ocr/releases/download/v0.7.0"
+
+checksum_ok() {
+  local file="$1" sum="$2"
+  # macOS ships a BSD sha256sum that cannot verify checksum lists at all, so
+  # prefer shasum (perl) and fall back to GNU sha256sum on slim Linux images
+  if command -v shasum >/dev/null 2>&1; then
+    echo "$sum  $file" | shasum -a 256 --check --status 2>/dev/null
+  else
+    echo "$sum  $file" | sha256sum --check --status 2>/dev/null
+  fi
+}
+
+fetch() {
+  local url="$1" dest="$2" sum="$3"
+  if [[ -f "$dest" ]] && checksum_ok "$dest" "$sum"; then
+    echo "ok (cached) $(basename "$dest")"
+    return 0
+  fi
+  mkdir -p "$(dirname "$dest")"
+  echo "fetch $(basename "$dest")"
+  curl -fsSLo "$dest.tmp" "$url"
+  checksum_ok "$dest.tmp" "$sum" || { echo "checksum mismatch: $dest" >&2; rm -f "$dest.tmp"; exit 1; }
+  mv "$dest.tmp" "$dest"
+}
+
+fetch "$v6/pp-ocrv6_small_det.onnx" "$root/ppocrv6-small/pp-ocrv6_small_det.onnx" d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e
+fetch "$v6/pp-ocrv6_small_rec.onnx" "$root/ppocrv6-small/pp-ocrv6_small_rec.onnx" 5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634
+fetch "$v6/ppocrv6_dict.txt"        "$root/ppocrv6-small/ppocrv6_dict.txt"        b5f2bfe2bdd9448429e3e82b51c789775d9b42f2403d082b00662eb77e401c5d
+'''
+
 [tasks.coverage]
 run = "cargo llvm-cov nextest --html --open"
 
 [tasks.fmt]
-description = "Format with nightly rustfmt"
-tools.rust = "nightly"
+description = "Format with rustfmt"
 run = "cargo fmt"
 
 [tasks.fmt-check]
 description = "Check formatting (CI)"
-tools.rust = "nightly"
 run = "cargo fmt --check"
 
 [tasks.lint]
@@ -17,11 +106,10 @@ run = "cargo clippy -- -D warnings"
 
 [tasks.test]
 description = "Run tests (nextest for unit/integration, cargo test for doctests)"
-tools.rust = "nightly"
-env = { RUSTDOCFLAGS = "--cfg docsrs", CARGO_TERM_COLOR = "always" }
+env = { RUSTDOCFLAGS = "--cfg docsrs" }
 run = [
-    "cargo nextest run --all-features",
-    "cargo test --doc --all-features -- --color always",
+  "cargo nextest run --all-features",
+  "cargo test --doc --all-features -- --color always",
 ]
 
 [tasks.test-doc]
@@ -30,7 +118,9 @@ env = { RUSTDOCFLAGS = "--cfg docsrs" }
 run = "cargo test --doc --all-features"
 
 [tasks.docs]
-description = "Build docs locally (nightly)"
-tools.rust = "nightly"
+description = "Build docs locally"
 env = { RUSTDOCFLAGS = "--cfg docsrs" }
-run = "cargo doc --all-features --no-deps --open"
+run = "cargo doc --all-features --no-deps"
+
+[env]
+CARGO_TERM_COLOR = "always"
