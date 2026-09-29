@@ -27,6 +27,33 @@ export PDFIUM_LIB_PATH=/path/to/pdfium/lib
 
 Pre-built Pdfium binaries for all platforms are available at
 [github.com/bblanchon/pdfium-binaries](https://github.com/bblanchon/pdfium-binaries).
+In this repo, `mise run pdfium` fetches the pinned build per platform and
+syncs it into `pdfium-lib/`, and `mise run models` fetches the checksum-pinned
+PP-OCR model pair used by the ONNX backend.
+
+## CLI
+
+`docuparse-cli` (in `crates/docuparse-cli`) exposes text extraction, page
+rendering, and OCR-fallback extraction on the command line. Prebuilt binaries
+for macOS (Intel and Apple Silicon), Linux (x86_64 and aarch64), and Windows
+(x86_64) are attached to [releases](https://github.com/asincole/docuparse/releases)
+under `cli-v*` tags, each with a `.sha256` checksum.
+
+Install the binary via mise's HTTP backend:
+
+```toml
+[tools."http:docuparse-cli"]
+version = "0.1.0"
+
+[tools."http:docuparse-cli".platforms]
+macos-arm64 = { url = "https://github.com/asincole/docuparse/releases/download/cli-v{{version}}/docuparse-cli-aarch64-apple-darwin.tar.gz", checksum = "sha256:<from SHA256SUMS>" }
+macos-x64 = { url = "https://github.com/asincole/docuparse/releases/download/cli-v{{version}}/docuparse-cli-x86_64-apple-darwin.tar.gz", checksum = "sha256:<from SHA256SUMS>" }
+linux-x64 = { url = "https://github.com/asincole/docuparse/releases/download/cli-v{{version}}/docuparse-cli-x86_64-unknown-linux-gnu.tar.gz", checksum = "sha256:<from SHA256SUMS>" }
+linux-arm64 = { url = "https://github.com/asincole/docuparse/releases/download/cli-v{{version}}/docuparse-cli-aarch64-unknown-linux-gnu.tar.gz", checksum = "sha256:<from SHA256SUMS>" }
+```
+
+Once published to crates.io, `cargo install docuparse-cli` works as well; the
+linux x86_64 build requires glibc >= 2.38 (the bundled ONNX Runtime's floor).
 
 ## Usage
 
@@ -75,6 +102,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ## OCR
 
 OCR is opt-in via feature flags. Two backends are provided:
+
+The CLI can preserve native text and OCR only pages without a text layer:
+
+```bash
+cargo run -p docuparse-cli --features ocr -- text --ocr-fallback --json document.pdf
+```
+
+Set `PDFIUM_LIB_PATH`, `OCR_DET_MODEL_PATH`, `OCR_REC_MODEL_PATH`, and `OCR_DICT_PATH` before running. The flag is opt-in; native-text extraction errors still stop the command. The ONNX backend is initialized only when a selected page has no native text.
 
 ### ONNX (local inference)
 

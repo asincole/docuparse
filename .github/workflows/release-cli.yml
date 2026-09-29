@@ -1,0 +1,127 @@
+name: Release CLI
+
+on:
+  push:
+    tags: ["cli-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # both mac targets cross-compile on the arm runner; plain cargo
+          # targets, no Xcode project or signing involved
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          # x86_64 gnu built on ubuntu-24.04: glibc 2.39 floor, matching
+          # the statically linked ONNX Runtime shipped through oar-ocr
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-24.04
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install build dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y nasm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+          key: ${{ matrix.target }}
+          cache-directories: |
+            ~/.cache/ort
+            ~/Library/Caches/ort.pyke.io
+
+      - name: Build
+        run: cargo build --release -p docuparse-cli --features ocr --target ${{ matrix.target }}
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          staging="docuparse-cli-${{ matrix.target }}"
+          mkdir -p "dist/$staging"
+          cp "target/${{ matrix.target }}/release/docuparse-cli" "dist/$staging/"
+          tar -czf "dist/$staging.tar.gz" -C dist "$staging"
+          (
+            cd dist
+            if command -v sha256sum >/dev/null 2>&1; then
+              sha256sum "$staging.tar.gz" > "$staging.tar.gz.sha256"
+            else
+              shasum -a 256 "$staging.tar.gz" > "$staging.tar.gz.sha256"
+            fi
+          )
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          staging="docuparse-cli-${{ matrix.target }}"
+          mkdir -p "dist/$staging"
+          cp "target/${{ matrix.target }}/release/docuparse-cli.exe" "dist/$staging/"
+          powershell -NoProfile -Command "Compress-Archive -Path 'dist/$staging' -DestinationPath 'dist/$staging.zip'"
+          (
+            cd dist
+            sha256sum "$staging.zip" > "$staging.zip.sha256" 2>/dev/null \
+              || powershell -NoProfile -Command "(Get-FileHash '$staging.zip' -Algorithm SHA256).Hash.ToLower() + '  $staging.zip'" > "$staging.zip.sha256"
+          )
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docuparse-cli-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/cli-v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Consolidate checksums
+        run: |
+          cd dist
+          cat *.sha256 > SHA256SUMS
+          rm -- *.sha256
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          gh release create "$tag" dist/* \
+            --title "docuparse-cli ${tag#cli-v}" \
+            --generate-notes \
+            --notes-footer "Binaries are also installable via mise's HTTP backend; see crates/docuparse-cli/README.md. pdfium and OCR models are fetched separately by the docuparse repo's mise tasks."

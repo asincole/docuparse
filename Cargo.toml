@@ -21,6 +21,9 @@ exclude = [
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[workspace]
+members = ["crates/docuparse-cli"]
+
 [[example]]
 name = "ocr_onnx"
 required-features = ["ocr-onnx"]

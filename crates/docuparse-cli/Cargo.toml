@@ -1,0 +1,25 @@
+[package]
+name = "docuparse-cli"
+version = "0.1.0"
+edition = "2024"
+description = "Command-line PDF text extraction, rendering, and OCR on top of docuparse"
+license = "MIT"
+repository = "https://github.com/asincole/docuparse"
+readme = "README.md"
+keywords = ["pdf", "cli", "ocr", "text-extraction"]
+categories = ["command-line-utilities", "text-processing"]
+
+[dependencies]
+docuparse = { path = "../.." }
+hotpath = "0.16.1"
+usage-rs = { version = "6.4.1", features = ["completions"] }
+serde_json = "1.0.151"
+image = "0.25.10"
+
+[dev-dependencies]
+usage-rs = { version = "6.4.1", features = ["test"] }
+
+[features]
+ocr = ["docuparse/ocr-onnx", "docuparse/ocr-openai"]
+hotpath = ["hotpath/hotpath", "docuparse/hotpath"]
+hotpath-alloc = ["hotpath/hotpath-alloc", "docuparse/hotpath-alloc", "hotpath"]
