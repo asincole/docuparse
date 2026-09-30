@@ -12,6 +12,8 @@ mise run test         # nextest (all features) + doctests (nightly)
 mise run test-doc     # doctests only
 mise run docs         # build docs locally (nightly, all features)
 mise run coverage     # cargo llvm-cov nextest --html
+mise run bootstrap    # machine setup: pinned pdfium lib + OCR models
+mise run build-cli    # release CLI with OCR features
 ```
 
 **Order:** `fmt-check -> lint -> test` (matches CI).
@@ -33,7 +35,7 @@ cargo test --doc --all-features                 # doctests only
 
 ## Architecture
 
-Single-crate Rust library built on `pdfium-render` (Pdfium C++ bindings). `src/lib.rs` is the root.
+Cargo workspace: the `docuparse` library plus the `docuparse-cli` binary crate in `crates/docuparse-cli`. The lib is built on `pdfium-render` (Pdfium C++ bindings); `src/lib.rs` is its root.
 
 ```
 src/
@@ -88,4 +90,6 @@ All features are tested together: `--all-features`.
 
 GitHub Actions (`ci.yml`): fmt-check → clippy → test (all features). Also a separate docs build job using nightly.
 
-Release automation via `release-plz` on push to `master`.
+Release automation (`release-plz.yml`): release-plz on push to `master` versions and publishes **both workspace crates** to crates.io (`docuparse` first, then `docuparse-cli`); the CLI's `docuparse` dependency version is bumped in the same release PR.
+
+CLI binaries (`release-cli.yml`): prebuilt for 5 targets and attached to GitHub Releases under `cli-v*` tags. Tag builds are cache-restore-only in mbx — a `workflow_dispatch` run of that workflow warms the caches. Shared deps/versions live in `[workspace.package]` / `[workspace.dependencies]` in the root `Cargo.toml`.
