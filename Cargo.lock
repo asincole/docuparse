@@ -813,7 +813,7 @@ dependencies = [
 
 [[package]]
 name = "docuparse"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "base64 0.23.1",
  "bon",
@@ -836,7 +836,7 @@ dependencies = [
 
 [[package]]
 name = "docuparse-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "docuparse",
  "hotpath",
