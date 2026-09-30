@@ -42,6 +42,14 @@ license = "MIT"
 [workspace.metadata.release-plz]
 semver-checks = false
 
+[[workspace.metadata.release-plz.package]]
+name = "docuparse"
+git_tag_name = "v{{ version }}"
+
+[[workspace.metadata.release-plz.package]]
+name = "docuparse-cli"
+git_tag_name = "cli-v{{ version }}"
+
 [workspace.dependencies]
 hotpath = "0.27.0"
 image = "0.25.10"

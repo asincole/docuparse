@@ -45,3 +45,12 @@ ocr = [
   "docuparse/ocr-onnx",
   "docuparse/ocr-openai",
 ]
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/cli-v{ version }/{ name }-{ target }.tar.gz"
+bin-dir = "{ name }-{ target }/{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-url = "{ repo }/releases/download/cli-v{ version }/{ name }-{ target }.zip"
+pkg-fmt = "zip"
