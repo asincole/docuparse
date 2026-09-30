@@ -18,8 +18,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-apple-darwin
-            os: macos-15-latest
           - target: aarch64-apple-darwin
             os: macos-15
           # x86_64 gnu built on ubuntu-24.04: glibc 2.39 floor, matching
@@ -33,6 +31,10 @@ jobs:
           # (DLL copy target dir miscomputed); revisit on the next ort release
           # - target: x86_64-pc-windows-msvc
           #   os: windows-latest
+          # mac intel omitted: macos-15-latest runner pool was congested
+          # (30m+ queue with no outage); revisit when capacity normalizes
+          # - target: x86_64-apple-darwin
+          #   os: macos-15-latest
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
