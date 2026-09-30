@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1](https://github.com/asincole/docuparse/compare/docuparse-cli-v0.1.0...docuparse-cli-v0.1.1) - 2026-09-30
+
+### Other
+
+- *(release)* align tag naming, changelog entries, and binstall metadata
+- release ([#10](https://github.com/asincole/docuparse/pull/10))
+
 ## [0.1.0](https://github.com/asincole/docuparse/releases/tag/cli-v0.1.0) - 2026-09-30
 
 ### Added
