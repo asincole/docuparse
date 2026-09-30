@@ -63,9 +63,17 @@ jobs:
             ort-${{ matrix.target }}-
 
       - name: Build
+        if: runner.os != 'Windows'
         env:
           CARGO_BUILD_TARGET: ${{ matrix.target }}
         run: mise run build-cli
+
+      - name: Build (Windows, bypass mbx shim)
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          CARGO_BUILD_TARGET: ${{ matrix.target }}
+        run: '"$(rustup which cargo)" build --release -p docuparse-cli --features ocr'
 
       - name: Package (Unix)
         if: runner.os != 'Windows'
