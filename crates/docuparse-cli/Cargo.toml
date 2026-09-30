@@ -1,6 +1,6 @@
 [package]
 name = "docuparse-cli"
-version = "0.1.0"
+version = "0.1.1"
 edition.workspace = true
 description = "Command-line PDF text extraction, rendering, and OCR on top of docuparse"
 readme = "README.md"
@@ -18,7 +18,7 @@ categories = [
 ]
 
 [dependencies]
-docuparse = { path = "../..", version = "0.0.4" }
+docuparse = { path = "../..", version = "0.0.5" }
 hotpath = { workspace = true }
 image = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

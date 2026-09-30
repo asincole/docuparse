@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5](https://github.com/asincole/docuparse/compare/docuparse-v0.0.4...docuparse-v0.0.5) - 2026-09-30
+
+### Other
+
+- *(release-cli)* drop the mac intel target
+- *(release-cli)* drop the Windows target until ort-sys supports cross-target builds
+- *(release-cli)* bypass the mbx cargo shim on Windows
+- *(release)* align tag naming, changelog entries, and binstall metadata
+- release ([#10](https://github.com/asincole/docuparse/pull/10))
+
 ## [0.0.4](https://github.com/asincole/docuparse/compare/v0.0.3...v0.0.4) - 2026-09-30
 
 ### Added
