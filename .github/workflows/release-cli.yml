@@ -28,8 +28,11 @@ jobs:
             os: ubuntu-24.04
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04-arm
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
+          # windows omitted: ort-sys 2.0.0-rc.13 panics in
+          # build/dynamic_link.rs when CARGO_BUILD_TARGET is set
+          # (DLL copy target dir miscomputed); revisit on the next ort release
+          # - target: x86_64-pc-windows-msvc
+          #   os: windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
