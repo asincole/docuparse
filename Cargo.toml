@@ -1,6 +1,6 @@
 [package]
 name = "docuparse"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2024"
 description = "Document extraction and parsing - PDF text, rendering, and OCR"
 documentation = "https://docs.rs/docuparse"
@@ -38,6 +38,9 @@ members = ["crates/docuparse-cli"]
 edition = "2024"
 repository = "https://github.com/asincole/docuparse"
 license = "MIT"
+
+[workspace.metadata.release-plz]
+semver-checks = false
 
 [workspace.dependencies]
 hotpath = "0.27.0"
