@@ -28,9 +28,12 @@ jobs:
           bootstrap_skip: "task"
           cache: true
 
-      - uses: jdx/mr-boxington-action@v1
-        with:
-          save-on-workflow-dispatch: "true"
+      - name: Cache rust build
+        uses: Swatinem/rust-cache@v2
+
+      # - uses: jdx/mr-boxington-action@v1
+      #   with:
+      #     save-on-workflow-dispatch: "true"
 
       - name: Cache ort downloads
         uses: actions/cache@v6
