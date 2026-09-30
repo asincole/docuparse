@@ -1,0 +1,10 @@
+[workspace]
+semver_check = false
+
+[[package]]
+name = "docuparse"
+git_tag_name = "v{{ version }}"
+
+[[package]]
+name = "docuparse-cli"
+git_tag_name = "cli-v{{ version }}"
