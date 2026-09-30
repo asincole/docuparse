@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4](https://github.com/asincole/docuparse/compare/docuparse-v0.0.3...docuparse-v0.0.4) - 2026-09-30
+
+### Added
+
+- *(cli)* add docuparse-cli crate with release workflow ([#9](https://github.com/asincole/docuparse/pull/9))
+
+### Other
+
+- release v0.0.4
+- *(deps)* refresh dependencies to latest ([#8](https://github.com/asincole/docuparse/pull/8))
+
 ## [0.0.3](https://github.com/asincole/docuparse/compare/v0.0.2...v0.0.3) - 2026-05-21
 
 ### Other
