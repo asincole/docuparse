@@ -31,10 +31,8 @@ jobs:
           # (DLL copy target dir miscomputed); revisit on the next ort release
           # - target: x86_64-pc-windows-msvc
           #   os: windows-latest
-          # intel cross-compiled on the arm64 macos-15 pool: the dedicated
-          # macos-15-latest intel pool queued 30m+ without starting one job
-          - target: x86_64-apple-darwin
-            os: macos-15
+          # mac intel dropped: ort-sys ships no x86_64-apple-darwin
+          # ONNX Runtime prebuilts, so the ocr feature can never link there
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
