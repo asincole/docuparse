@@ -93,6 +93,10 @@ fetch "$v6/ppocrv6_dict.txt"        "$root/ppocrv6-small/ppocrv6_dict.txt"      
 description = "Build the release CLI with ONNX OCR"
 run = "cargo build --release -p docuparse-cli --features ocr"
 
+[tasks.build-cli-core]
+description = "Build the release CLI without OCR (targets with no ONNX Runtime prebuilts)"
+run = "cargo build --release -p docuparse-cli"
+
 [tasks.coverage]
 run = "cargo llvm-cov nextest --html --open"
 

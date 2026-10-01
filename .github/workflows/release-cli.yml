@@ -20,21 +20,28 @@ jobs:
         include:
           - target: aarch64-apple-darwin
             os: macos-15
+            task: build-cli
           # x86_64 gnu built on ubuntu-24.04: glibc 2.39 floor, matching
           # the statically linked ONNX Runtime shipped through oar-ocr
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-24.04
+            task: build-cli
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04-arm
+            task: build-cli
           # windows omitted: ort-sys 2.0.0-rc.13 panics in
           # build/dynamic_link.rs when CARGO_BUILD_TARGET is set
           # (DLL copy target dir miscomputed); revisit on the next ort release
           # - target: x86_64-pc-windows-msvc
           #   os: windows-latest
           # intel cross-compiled on the arm64 macos-15 pool: the dedicated
-          # macos-15-latest intel pool queued 30m+ without starting one job
+          # macos-15-latest intel pool queued 30m+ without starting one job;
+          # built without the ocr feature because ort-sys 2.0.0-rc.13 ships
+          # no x86_64-apple-darwin ONNX Runtime prebuilts (dist.tsv lists
+          # aarch64-apple-darwin only)
           - target: x86_64-apple-darwin
             os: macos-15
+            task: build-cli-core
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -74,7 +81,7 @@ jobs:
         if: runner.os != 'Windows'
         env:
           CARGO_BUILD_TARGET: ${{ matrix.target }}
-        run: mise run build-cli
+        run: mise run ${{ matrix.task }}
 
       - name: Build (Windows, bypass mbx shim)
         if: runner.os == 'Windows'
@@ -160,5 +167,5 @@ jobs:
             --verify-tag \
             --title "$tag" \
             --generate-notes \
-            --notes "Binaries are also installable via mise's HTTP backend; see crates/docuparse-cli/README.md. PDFium and OCR models are fetched separately by the repository's mise tasks." \
+            --notes "Binaries are also installable via mise's HTTP backend; see crates/docuparse-cli/README.md. PDFium and OCR models are fetched separately by the repository's mise tasks. Intel macOS builds exclude on-device OCR: ONNX Runtime has no x86_64-apple-darwin prebuilts." \
             || gh release upload "$tag" "${assets[@]}" --clobber
