@@ -31,10 +31,10 @@ jobs:
           # (DLL copy target dir miscomputed); revisit on the next ort release
           # - target: x86_64-pc-windows-msvc
           #   os: windows-latest
-          # mac intel omitted: macos-15-latest runner pool was congested
-          # (30m+ queue with no outage); revisit when capacity normalizes
-          # - target: x86_64-apple-darwin
-          #   os: macos-15-latest
+          # intel cross-compiled on the arm64 macos-15 pool: the dedicated
+          # macos-15-latest intel pool queued 30m+ without starting one job
+          - target: x86_64-apple-darwin
+            os: macos-15
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -158,6 +158,7 @@ jobs:
 
           gh release create "$tag" "${assets[@]}" \
             --verify-tag \
-            --title "docuparse-cli ${tag#cli-v}" \
+            --title "$tag" \
             --generate-notes \
-            --notes "Binaries are also installable via mise's HTTP backend; see crates/docuparse-cli/README.md. PDFium and OCR models are fetched separately by the repository's mise tasks."
+            --notes "Binaries are also installable via mise's HTTP backend; see crates/docuparse-cli/README.md. PDFium and OCR models are fetched separately by the repository's mise tasks." \
+            || gh release upload "$tag" "${assets[@]}" --clobber

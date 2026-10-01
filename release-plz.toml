@@ -1,7 +1,45 @@
+[changelog]
+commit_parsers = [
+  { message = "^ci", skip = true },
+  { message = "^chore: release", skip = true },
+  { message = "^feat", group = "added" },
+  { message = "^changed", group = "changed" },
+  { message = "^deprecated", group = "deprecated" },
+  { message = "^removed", group = "removed" },
+  { message = "^fix", group = "fixed" },
+  { message = "^security", group = "security" },
+  { message = ".*", group = "other" },
+]
+postprocessors = [
+  { pattern = '(?m)^### [^\n]+\n\n+### ', replace = '### ' },
+  { pattern = '(?m)^### [^\n]+\n\n+## ', replace = '## ' },
+  { pattern = '(?m)^### [^\n]+\n\n+\z', replace = '' },
+]
+body = '''
+{%- set is_cli_release = false -%}
+{%- if release_link -%}
+{%- set is_cli_release = release_link is containing("cli-v") -%}
+{%- endif -%}
+## [{{ version }}]{%- if release_link -%}({{ release_link }}){% endif %} - {{ timestamp | date(format="%Y-%m-%d") }}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+
+{% for commit in commits %}{%- if commit.scope -%}
+{%- if is_cli_release or commit.scope != "cli" -%}
+- *({{commit.scope}})* {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message }}{%- if commit.links %} ({% for link in commit.links %}[{{link.text}}]({{link.href}}) {% endfor -%}){% endif %}
+{% endif -%}
+{% else -%}
+- {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message }}
+{% endif -%}
+{% endfor -%}
+{% endfor %}'''
+
 [[package]]
 name = "docuparse"
 git_tag_name = "v{{ version }}"
+git_release_name = "v{{ version }}"
 
 [[package]]
 name = "docuparse-cli"
 git_tag_name = "cli-v{{ version }}"
+git_release_name = "cli-v{{ version }}"
