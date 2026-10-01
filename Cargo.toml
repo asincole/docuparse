@@ -1,6 +1,6 @@
 [package]
 name = "docuparse"
-version = "0.0.5"
+version = "0.0.6"
 edition = "2024"
 description = "Document extraction and parsing - PDF text, rendering, and OCR"
 documentation = "https://docs.rs/docuparse"
