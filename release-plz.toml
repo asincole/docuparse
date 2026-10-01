@@ -1,3 +1,6 @@
+[workspace]
+release_commits = "^(feat|fix|perf|revert)"
+
 [changelog]
 commit_parsers = [
   { message = "^ci", skip = true },
