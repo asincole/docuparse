@@ -158,6 +158,7 @@ jobs:
 
           gh release create "$tag" "${assets[@]}" \
             --verify-tag \
-            --title "docuparse-cli ${tag#cli-v}" \
+            --title "$tag" \
             --generate-notes \
-            --notes "Binaries are also installable via mise's HTTP backend; see crates/docuparse-cli/README.md. PDFium and OCR models are fetched separately by the repository's mise tasks."
+            --notes "Binaries are also installable via mise's HTTP backend; see crates/docuparse-cli/README.md. PDFium and OCR models are fetched separately by the repository's mise tasks." \
+            || gh release upload "$tag" "${assets[@]}" --clobber
